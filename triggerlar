@@ -51,3 +51,8 @@ CREATE TRIGGER trg_google_employees_audit
 AFTER INSERT OR UPDATE OR DELETE ON google_employees
 FOR EACH ROW
 EXECUTE FUNCTION log_google_employees_changes();
+
+
+
+
+
