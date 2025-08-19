@@ -1,1 +1,3 @@
+google_employees jadvalidagi INSERT, UPDATE va DELETE operatsiyalarini avtomatik ravishda audit log jadvaliga yozib boradigan PostgreSQL triggeri.
+
 
