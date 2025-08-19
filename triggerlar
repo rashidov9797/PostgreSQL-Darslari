@@ -1,1 +1,53 @@
  google_employees jadvalidagi INSERT, UPDATE va DELETE operatsiyalarini avtomatik ravishda audit log jadvaliga yozib boradigan PostgreSQL triggeri.
+
+
+
+# 1. Audit jadvalini yaratish
+
+CREATE TABLE IF NOT EXISTS google_employees_audit (
+    audit_id    SERIAL PRIMARY KEY,
+    operation   VARCHAR(10),
+    changed_at  TIMESTAMP DEFAULT now(),
+    user_name   TEXT,
+    old_row     TEXT,
+    new_row     TEXT
+);
+
+
+# Audit jadvali har bir o'zgarishni quyidagi ma'lumotlar bilan saqlaydi:
+
+-> operation – bajarilgan operatsiya (INSERT, UPDATE, DELETE)
+-> changed_at – o'zgarish vaqti
+-> user_name – o'zgarishni amalga oshirgan foydalanuvchi
+-> old_row – eski qator (agar mavjud bo'lsa)
+-> new_row – yangi qator (agar mavjud bo'lsa)
+
+
+# 2. Trigger funksiyasini yaratish
+
+CREATE OR REPLACE FUNCTION log_google_employees_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO google_employees_audit(operation, user_name, new_row)
+        VALUES('INSERT', CURRENT_USER, row_to_json(NEW)::text);
+        RETURN NEW;
+    ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO google_employees_audit(operation, user_name, old_row, new_row)
+        VALUES('UPDATE', CURRENT_USER, row_to_json(OLD)::text, row_to_json(NEW)::text);
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO google_employees_audit(operation, user_name, old_row)
+        VALUES('DELETE', CURRENT_USER, row_to_json(OLD)::text);
+        RETURN OLD;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+# 3. Triggerni jadvalga biriktirish
+CREATE TRIGGER trg_google_employees_audit
+AFTER INSERT OR UPDATE OR DELETE ON google_employees
+FOR EACH ROW
+EXECUTE FUNCTION log_google_employees_changes();
